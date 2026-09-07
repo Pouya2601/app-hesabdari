@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    margin: 0;
+    min-width: 320px;
+    background: #061417;
+    font-family: Tahoma, Arial, sans-serif;
+  }
+
+  button,
+  input {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .field {
+    width: 100%;
+    border-radius: 0.75rem;
+    border: 1px solid rgba(103, 232, 249, 0.25);
+    background: rgba(0, 0, 0, 0.18);
+    padding: 0.9rem 1rem;
+    color: white;
+    outline: none;
+    transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  }
+
+  .field::placeholder {
+    color: rgb(100 116 139);
+  }
+
+  .field:focus {
+    border-color: rgb(34 211 238);
+    background: rgba(0, 0, 0, 0.28);
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.12);
+  }
+}
