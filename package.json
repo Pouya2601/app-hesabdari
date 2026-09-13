@@ -1,11 +1,12 @@
 {
-"name": "vite-react-typescript-starter",
+"name": "app-hesabdari",
 "private": true,
 "version": "0.0.0",
 "type": "module",
+"main": "dist-electron/main.js",
 "scripts": {
 "dev": "vite",
-"build": "vite build",
+"build": "tsc && vite build",
 "electron:build": "electron-builder",
 "lint": "eslint .",
 "preview": "vite preview",
@@ -34,5 +35,19 @@
 "typescript": "^5.5.3",
 "typescript-eslint": "^8.3.0",
 "vite": "^5.4.2"
+},
+"build": {
+"appId": "com.hesabdari.app",
+"productName": "HesabdariApp",
+"directories": {
+"output": "release"
+},
+"files": [
+"dist/**/*",
+"dist-electron/**/*"
+],
+"win": {
+"target": ["nsis"]
+}
 }
 }
