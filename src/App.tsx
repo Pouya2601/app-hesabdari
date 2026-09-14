@@ -435,13 +435,6 @@ return (
 <input required type="password" value={authPassword} onChange={e => setAuthPassword(e.target.value)} className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-blue-500" />
 </div>
 <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-500 rounded-xl font-bold text-white transition-colors">ورود</button>
-<button
-type="button"
-onClick={() => setAuthMode('register')}
-className="w-full mt-3 text-center text-sm text-blue-400 hover:underline"
->
-حساب کاربری ندارید؟ ثبت‌نام کنید
-</button>
 </form>
 )}
 </div>
