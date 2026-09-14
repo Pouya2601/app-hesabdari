@@ -31,21 +31,29 @@ export default function ReportsTab({ userId }: { userId: string }) {
     if (period === 'year') { setFromDate(isoDaysAgo(364)); setToDate(today) }
   }, [period])
 
-  useEffect(() => {
-    const load = async () => {
-      const { data: s } = await supabase
-        .from('sales').select('*').eq('user_id', userId)
-        .gte('sale_date', fromDate).lte('sale_date', toDate)
-      setSales((s as Sale[]) || [])
+useEffect(() => {
+const load = async () => {
+const { data: s } = await supabase
+.from('sales')
+.select('*')
+.eq('user_id', userID)
+.gte('sale_date', fromDate)
+.lte('sale_date', toDate);
 
-      const { data: items } = await supabase
-        .from('payment_items').select('*, sales(total_amount, profit_amount)')
-        .eq('user_id', userId).eq('is_archived', true)
-        .gte('settled_at', fromDate).lte('settled_at', toDate + 'T23:59:59')
-      setSettledItems((items as SettledItem[]) || [])
-    }
-    load()
-  }, [userId, fromDate, toDate])
+setSales((s as Sale[]) || []);
+
+const { data: items } = await supabase
+.from('payment_items')
+.select('*, sales(total_amount, profit_amount, sale_date, customer_name, payment_type, down_payment)')
+.eq('user_id', userID)
+.eq('is_archived', true)
+.gte('settled_at', fromDate)
+.lte('settled_at', toDate + 'T23:59:59');
+
+setSettledItems((items as SettledItem[]) || []);
+}
+load()
+}, [userID, fromDate, toDate]);
 
   const totalInvoiced = sales.reduce((sum, s) => sum + s.total_amount, 0)
   const totalProfitInvoiced = sales.reduce((sum, s) => sum + s.profit_amount, 0)
