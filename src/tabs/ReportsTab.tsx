@@ -25,9 +25,11 @@ export default function ReportsTab({ userID }: { userID: string }) {
 const [period, setPeriod] = useState<Period>('day')
 const [fromDate, setFromDate] = useState(getTodayISO())
 const [toDate, setToDate] = useState(getTodayISO())
-const [sales, setSales] = useState<Sale[]>([])
-const [settledItems, setSettledItems] = useState<SettledItem[]>([])
 
+const [allSales, setAllSales] = useState<Sale[]>([])
+const [allSettledItems, setAllSettledItems] = useState<SettledItem[]>([])
+
+// تنظیم بازه‌های زمانی پیش‌فرض
 useEffect(() => {
 const today = getTodayISO()
 if (period === 'day') { setFromDate(today); setToDate(today) }
@@ -36,50 +38,64 @@ if (period === 'month') { setFromDate(subDaysISO(29)); setToDate(today) }
 if (period === 'year') { setFromDate(subDaysISO(364)); setToDate(today) }
 }, [period])
 
+// گرفتن کل داده‌ها از دیتابیس بدون هیچ فیلتر سخت‌گیرانه‌ای
 useEffect(() => {
-const load = async () => {
-const { data: s } = await supabase
+const loadAll = async () => {
+if (!userID) return
+
+const { data: s, error: sErr } = await supabase
 .from('sales')
 .select('*')
 .eq('user_id', userID)
-.gte('sale_date', fromDate)
-.lte('sale_date', toDate)
 
-setSales((s as Sale[]) || [])
+if (sErr) console.error('Error loading sales:', sErr)
+else setAllSales((s as Sale[]) || [])
 
-const { data: items } = await supabase
+const { data: items, error: iErr } = await supabase
 .from('payment_items')
 .select('*, sales(total_amount, profit_amount, sale_date, sale_shamsi, customer_name, payment_type, down_payment)')
 .eq('user_id', userID)
 .eq('is_archived', true)
-.gte('settled_at', fromDate)
-.lte('settled_at', toDate + 'T23:59:59')
 
-setSettledItems((items as SettledItem[]) || [])
+if (iErr) console.error('Error loading settled items:', iErr)
+else setAllSettledItems((items as SettledItem[]) || [])
 }
-if (userID) {
-load()
-}
-}, [userID, fromDate, toDate])
+loadAll()
+}, [userID])
 
-const totalInvoiced = sales.reduce((sum, s) => sum + s.total_amount, 0)
-const totalProfitInvoiced = sales.reduce((sum, s) => sum + s.profit_amount, 0)
+// فیلتر هوشمند و امن روی تاریخ‌ها (پشتیبانی کامل از تاریخ میلادی و شمسی)
+const sales = allSales.filter(s => {
+const itemDate = s.sale_date ? s.sale_date.slice(0, 10) : (s.sale_shamsi || '')
+const start = fromDate.slice(0, 10)
+const end = toDate.slice(0, 10)
+return itemDate >= start && itemDate <= end
+})
 
-const cashInFromSales = sales.reduce((sum, s) => sum + (s.payment_type === 'cash' ? s.total_amount : s.down_payment), 0)
-const cashInFromSettled = settledItems.reduce((sum, it) => sum + it.amount, 0)
+const settledItems = allSettledItems.filter(it => {
+const itemDate = it.settled_at ? it.settled_at.slice(0, 10) : ''
+const start = fromDate.slice(0, 10)
+const end = toDate.slice(0, 10)
+return itemDate >= start && itemDate <= end
+})
+
+const totalInvoiced = sales.reduce((sum, s) => sum + (s.total_amount || 0), 0)
+const totalProfitInvoiced = sales.reduce((sum, s) => sum + (s.profit_amount || 0), 0)
+
+const cashInFromSales = sales.reduce((sum, s) => sum + (s.payment_type === 'cash' ? (s.total_amount || 0) : (s.down_payment || 0)), 0)
+const cashInFromSettled = settledItems.reduce((sum, it) => sum + (it.amount || 0), 0)
 const actualCashIn = cashInFromSales + cashInFromSettled
 
 const profitInFromSales = sales.reduce((sum, s) => {
-if (s.payment_type === 'cash') return sum + s.profit_amount
-if (s.total_amount === 0) return sum
-return sum + s.profit_amount * (s.down_payment / s.total_amount)
+if (s.payment_type === 'cash') return sum + (s.profit_amount || 0)
+if (!s.total_amount || s.total_amount === 0) return sum
+return sum + (s.profit_amount || 0) * ((s.down_payment || 0) / s.total_amount)
 }, 0)
 
 const profitInFromSettled = settledItems.reduce((sum, it) => {
 const saleTotal = it.sales?.total_amount || 0
 const saleProfit = it.sales?.profit_amount || 0
 if (!saleTotal) return sum
-return sum + saleProfit * (it.amount / saleTotal)
+return sum + saleProfit * ((it.amount || 0) / saleTotal)
 }, 0)
 
 const actualProfitIn = profitInFromSales + profitInFromSettled
@@ -154,14 +170,14 @@ period === p ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300'
 </td>
 <td className="p-2 text-slate-300">{s.total_amount.toLocaleString()}</td>
 <td className="p-2 text-slate-300">{(s.payment_type === 'cash' ? s.total_amount : s.down_payment).toLocaleString()}</td>
-<td className="p-2 text-emerald-400">{s.payment_type === 'cash' ? s.profit_amount.toLocaleString() : Math.round(s.profit_amount * (s.down_payment / (s.total_amount || 1))).toLocaleString()}</td>
+<td className="p-2 text-emerald-400">{s.payment_type === 'cash' ? s.profit_amount.toLocaleString() : Math.round(s.profit_amount * ((s.down_payment || 0) / (s.total_amount || 1))).toLocaleString()}</td>
 </tr>
 ))}
 
 {settledItems.map((it) => {
 const saleTotal = it.sales?.total_amount || 1
 const saleProfit = it.sales?.profit_amount || 0
-const itemProfit = Math.round(saleProfit * (it.amount / saleTotal))
+const itemProfit = Math.round(saleProfit * ((it.amount || 0) / saleTotal))
 return (
 <tr key={`settled-${it.id}`} className="border-b border-slate-800/50 bg-slate-800/20">
 <td className="p-2 text-slate-400 text-xs">{it.settled_at ? formatJalali(it.settled_at.slice(0, 10)) : '-'}</td>
@@ -170,7 +186,7 @@ return (
 <span className="text-purple-400">{it.type === 'cheque' ? 'چک تسویه‌شده' : 'قسط تسویه‌شده'}</span>
 </td>
 <td className="p-2 text-slate-300">{saleTotal.toLocaleString()}</td>
-<td className="p-2 text-blue-300 font-semibold">{it.amount.toLocaleString()}</td>
+<td className="p-2 text-blue-300 font-semibold">{(it.amount || 0).toLocaleString()}</td>
 <td className="p-2 text-emerald-400">{itemProfit.toLocaleString()}</td>
 </tr>
 )
