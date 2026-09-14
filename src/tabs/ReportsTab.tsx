@@ -7,10 +7,15 @@ import JalaliDateInput from '../components/JalaliDateInput'
 type Period = 'day' | 'week' | 'month' | 'year' | 'custom'
 
 interface SettledItem extends PaymentItem {
-sales?: { total_amount: number; profit_amount: number; sale_date: string; customer_name: string; payment_type: string; down_payment: number }
+sales?: { total_amount: number; profit_amount: number; sale_date: string; sale_shamsi?: string; customer_name: string; payment_type: string; down_payment: number }
 }
 
-function isoDaysAgo(n: number): string {
+function getTodayISO(): string {
+const d = new Date()
+return d.toISOString().slice(0, 10)
+}
+
+function subDaysISO(n: number): string {
 const d = new Date()
 d.setDate(d.getDate() - n)
 return d.toISOString().slice(0, 10)
@@ -18,17 +23,17 @@ return d.toISOString().slice(0, 10)
 
 export default function ReportsTab({ userID }: { userID: string }) {
 const [period, setPeriod] = useState<Period>('day')
-const [fromDate, setFromDate] = useState(isoDaysAgo(0))
-const [toDate, setToDate] = useState(isoDaysAgo(0))
+const [fromDate, setFromDate] = useState(getTodayISO())
+const [toDate, setToDate] = useState(getTodayISO())
 const [sales, setSales] = useState<Sale[]>([])
 const [settledItems, setSettledItems] = useState<SettledItem[]>([])
 
 useEffect(() => {
-const today = isoDaysAgo(0)
+const today = getTodayISO()
 if (period === 'day') { setFromDate(today); setToDate(today) }
-if (period === 'week') { setFromDate(isoDaysAgo(6)); setToDate(today) }
-if (period === 'month') { setFromDate(isoDaysAgo(29)); setToDate(today) }
-if (period === 'year') { setFromDate(isoDaysAgo(364)); setToDate(today) }
+if (period === 'week') { setFromDate(subDaysISO(6)); setToDate(today) }
+if (period === 'month') { setFromDate(subDaysISO(29)); setToDate(today) }
+if (period === 'year') { setFromDate(subDaysISO(364)); setToDate(today) }
 }, [period])
 
 useEffect(() => {
@@ -44,7 +49,7 @@ setSales((s as Sale[]) || [])
 
 const { data: items } = await supabase
 .from('payment_items')
-.select('*, sales(total_amount, profit_amount, sale_date, customer_name, payment_type, down_payment)')
+.select('*, sales(total_amount, profit_amount, sale_date, sale_shamsi, customer_name, payment_type, down_payment)')
 .eq('user_id', userID)
 .eq('is_archived', true)
 .gte('settled_at', fromDate)
@@ -52,7 +57,9 @@ const { data: items } = await supabase
 
 setSettledItems((items as SettledItem[]) || [])
 }
+if (userID) {
 load()
+}
 }, [userID, fromDate, toDate])
 
 const totalInvoiced = sales.reduce((sum, s) => sum + s.total_amount, 0)
@@ -95,7 +102,7 @@ period === p ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300'
 
 {period === 'custom' && (
 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-<JalaliDateInput valueISO={fromDate} onChange={(iso) => setFromDate(iso)} label="از تاریخ (حداکثر تا یک سال قبل)" />
+<JalaliDateInput valueISO={fromDate} onChange={(iso) => setFromDate(iso)} label="از تاریخ" />
 <JalaliDateInput valueISO={toDate} onChange={(iso) => setToDate(iso)} label="تا تاریخ" />
 </div>
 )}
@@ -122,37 +129,56 @@ period === p ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300'
 </div>
 
 <section className="bg-slate-900 border border-slate-800 rounded-2xl p-5">
-<h2 className="text-white font-bold mb-4">تاریخچه فاکتورهای فروش</h2>
+<h2 className="text-white font-bold mb-4">تاریخچه فاکتورها و پرداختی‌های این بازه</h2>
 <div className="overflow-x-auto">
 <table className="w-full text-sm text-right">
 <thead>
 <tr className="text-slate-400 border-b border-slate-800">
 <th className="p-2">تاریخ</th>
 <th className="p-2">مشتری</th>
-<th className="p-2">نوع پرداخت</th>
-<th className="p-2">مبلغ کل</th>
-<th className="p-2">پیش‌پرداخت/دریــــافتی</th>
-<th className="p-2">سود فاکتور</th>
+<th className="p-2">نوع</th>
+<th className="p-2">مبلغ کل / قسط</th>
+<th className="p-2">مبلغ دریافتی</th>
+<th className="p-2">سود محقق‌شده</th>
 </tr>
 </thead>
 <tbody>
 {sales.map((s) => (
-<tr key={s.id} className="border-b border-slate-800/50">
+<tr key={`sale-${s.id}`} className="border-b border-slate-800/50">
 <td className="p-2 text-slate-400 text-xs">{s.sale_shamsi || formatJalali(s.sale_date)}</td>
 <td className="p-2 text-white">{s.customer_name}</td>
 <td className="p-2 text-xs">
-{s.payment_type === 'cash' && <span className="text-emerald-400">نقدی</span>}
-{s.payment_type === 'installment' && <span className="text-amber-400">اقساطی</span>}
-{s.payment_type === 'cheque' && <span className="text-blue-400">چکی</span>}
+{s.payment_type === 'cash' && <span className="text-emerald-400">فاکتور نقدی</span>}
+{s.payment_type === 'installment' && <span className="text-amber-400">فاکتور اقساطی</span>}
+{s.payment_type === 'cheque' && <span className="text-blue-400">فاکتور چکی</span>}
 </td>
 <td className="p-2 text-slate-300">{s.total_amount.toLocaleString()}</td>
 <td className="p-2 text-slate-300">{(s.payment_type === 'cash' ? s.total_amount : s.down_payment).toLocaleString()}</td>
-<td className="p-2 text-emerald-400">{s.profit_amount.toLocaleString()}</td>
+<td className="p-2 text-emerald-400">{s.payment_type === 'cash' ? s.profit_amount.toLocaleString() : Math.round(s.profit_amount * (s.down_payment / (s.total_amount || 1))).toLocaleString()}</td>
 </tr>
 ))}
-{sales.length === 0 && (
+
+{settledItems.map((it) => {
+const saleTotal = it.sales?.total_amount || 1
+const saleProfit = it.sales?.profit_amount || 0
+const itemProfit = Math.round(saleProfit * (it.amount / saleTotal))
+return (
+<tr key={`settled-${it.id}`} className="border-b border-slate-800/50 bg-slate-800/20">
+<td className="p-2 text-slate-400 text-xs">{it.settled_at ? formatJalali(it.settled_at.slice(0, 10)) : '-'}</td>
+<td className="p-2 text-white">{it.sales?.customer_name || 'مشتری'}</td>
+<td className="p-2 text-xs">
+<span className="text-purple-400">{it.type === 'cheque' ? 'چک تسویه‌شده' : 'قسط تسویه‌شده'}</span>
+</td>
+<td className="p-2 text-slate-300">{saleTotal.toLocaleString()}</td>
+<td className="p-2 text-blue-300 font-semibold">{it.amount.toLocaleString()}</td>
+<td className="p-2 text-emerald-400">{itemProfit.toLocaleString()}</td>
+</tr>
+)
+})}
+
+{sales.length === 0 && settledItems.length === 0 && (
 <tr>
-<td colSpan={6} className="p-4 text-center text-slate-500">در این بازه فاکتوری ثبت نشده است</td>
+<td colSpan={6} className="p-4 text-center text-slate-500">در این بازه فاکتور یا پرداختی ثبت نشده است</td>
 </tr>
 )}
 </tbody>
