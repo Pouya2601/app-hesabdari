@@ -79,7 +79,7 @@ export default function App() {
       <header className="border-b border-slate-800 bg-slate-900/50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-lg font-bold text-white">جامع حسابداری فروشگاهی</h1>
+            <h1 className="text-lg font-bold text-white">سیستم جامغ حسابداری</h1>
             <p className="text-xs text-slate-400">{profile.business_name} — {profile.first_name} {profile.last_name}</p>
           </div>
           <div className="flex items-center gap-3">
