@@ -10,13 +10,15 @@ import NewSaleTab from './tabs/NewSaleTab'
 import ChequesInstallmentsTab from './tabs/ChequesInstallmentsTab'
 import BulkPriceTab from './tabs/BulkPriceTab'
 import ReportsTab from './tabs/ReportsTab'
+import QuotesTab from './tabs/QuotesTab'
 
-type TabKey = 'sale' | 'cheques' | 'price' | 'customers' | 'inventory' | 'reports'
+type TabKey = 'sale' | 'quotes' | 'cheques' | 'price' | 'customers' | 'inventory' | 'reports'
 
 const tabs: { key: TabKey; label: string }[] = [
   { key: 'inventory', label: 'مدیریت انبار' },
   { key: 'customers', label: 'دفتر مشتریان' },
   { key: 'sale', label: 'ثبت فروش' },
+  { key: 'quotes', label: 'پیش‌فاکتور' },
   { key: 'cheques', label: 'چک‌ها و اقساط' },
   { key: 'price', label: 'تغییر قیمت دسته‌ای' },
   { key: 'reports', label: 'گزارش سود و زیان' },
@@ -79,7 +81,7 @@ export default function App() {
       <header className="border-b border-slate-800 bg-slate-900/50">
         <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h1 className="text-lg font-bold text-white">سیستم جامع حسابداری</h1>
+            <h1 className="text-lg font-bold text-white">جامع حسابداری فروشگاهی</h1>
             <p className="text-xs text-slate-400">{profile.business_name} — {profile.first_name} {profile.last_name}</p>
           </div>
           <div className="flex items-center gap-3">
@@ -106,6 +108,7 @@ export default function App() {
         {activeTab === 'inventory' && <InventoryTab userId={session.user.id} />}
         {activeTab === 'customers' && <CustomersTab userId={session.user.id} />}
         {activeTab === 'sale' && <NewSaleTab userId={session.user.id} />}
+        {activeTab === 'quotes' && <QuotesTab userId={session.user.id} />}
         {activeTab === 'cheques' && <ChequesInstallmentsTab userId={session.user.id} />}
         {activeTab === 'price' && <BulkPriceTab userId={session.user.id} />}
         {activeTab === 'reports' && <ReportsTab userId={session.user.id} />}

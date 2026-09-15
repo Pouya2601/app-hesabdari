@@ -63,6 +63,9 @@ export interface Sale {
   sale_date: string
   sale_shamsi: string
   created_at: string
+  is_cancelled?: boolean
+  cancelled_at?: string | null
+  quote_id?: string | null
 }
 
 export interface PaymentItem {
@@ -80,4 +83,34 @@ export interface PaymentItem {
   customer_id?: string | null
   customer_name?: string
   product_name?: string
+}
+
+export type QuoteStatus = 'pending' | 'approved'
+
+export interface QuoteItem {
+  id: string
+  quote_id: string
+  user_id: string
+  product_id: string | null
+  product_name: string
+  quantity: number
+  unit_price: number
+  unit_cost: number
+  line_total: number
+}
+
+export interface Quote {
+  id: string
+  user_id: string
+  customer_id: string | null
+  customer_name: string
+  status: QuoteStatus
+  discount_percent: number
+  profit_percent: number
+  subtotal: number
+  total_amount: number
+  quote_date: string
+  quote_shamsi: string
+  created_at: string
+  items?: QuoteItem[]
 }
